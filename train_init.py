@@ -53,13 +53,16 @@ parser.add_argument('--tiny', '-tiny', action='store_true',
 parser.add_argument('--session', '-sid', default='',
 	help='custom session name appended to output files, useful to separate different runs of a script')
 
+parser.add_argument('--num_workers', '-numwork', type=int, default=4,
+	help='number of workers in dataloader')
+
 opt = parser.parse_args()
 
 use_init = opt.mode > 0
 
 # for RGB-D initialization, we utilize ground truth scene coordinates as in mode 2 (RGB + ground truth scene coordinates)
 trainset = CamLocDataset("./datasets/" + opt.scene + "/train", mode=min(opt.mode, 1), sparse=opt.sparse, augment=True)
-trainset_loader = torch.utils.data.DataLoader(trainset, shuffle=True, num_workers=6)
+trainset_loader = torch.utils.data.DataLoader(trainset, shuffle=True, num_workers=opt.num_workers)
 
 print("Found %d training images for %s." % (len(trainset), opt.scene))
 

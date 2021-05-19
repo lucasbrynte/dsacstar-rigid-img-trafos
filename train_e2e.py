@@ -56,10 +56,13 @@ parser.add_argument('--tiny', '-tiny', action='store_true',
 parser.add_argument('--session', '-sid', default='',
 	help='custom session name appended to output files. Useful to separate different runs of the program')
 
+parser.add_argument('--num_workers', '-numwork', type=int, default=4,
+	help='number of workers in dataloader')
+
 opt = parser.parse_args()
 
 trainset = CamLocDataset("./datasets/" + opt.scene + "/train", mode=(0 if opt.mode < 2 else opt.mode), augment=True, aug_rotation=0, aug_scale_min=1, aug_scale_max=1) # use only photometric augmentation, not rotation and scaling
-trainset_loader = torch.utils.data.DataLoader(trainset, shuffle=True, num_workers=6)
+trainset_loader = torch.utils.data.DataLoader(trainset, shuffle=True, num_workers=opt.num_workers)
 
 print("Found %d training images for %s." % (len(trainset), opt.scene))
 
