@@ -264,9 +264,12 @@ for epoch in range(epochs):
 
 		del loss
 
-	print('Saving snapshot of the network to %s.' % opt.network)
-	torch.save(network.state_dict(), opt.network)
+        if iteration % max(1, round(opt.iterations / 10)) == 0:
+        	print('Saving snapshot of the network to %s.' % opt.network)
+        	torch.save(network.state_dict(), opt.network)
 	
 
+print('Saving snapshot of the network to %s.' % opt.network)
+torch.save(network.state_dict(), opt.network)
 print('Done without errors.')
 train_log.close()

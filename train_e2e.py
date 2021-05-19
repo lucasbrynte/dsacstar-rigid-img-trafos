@@ -142,8 +142,13 @@ for epoch in range(epochs):
 		train_log.write('%d %f\n' % (iteration, loss))
 		iteration = iteration + 1
 
-	print('Saving snapshot of the network to %s.' % opt.network_out)
-	torch.save(network.state_dict(), opt.network_out)
+        if iteration % max(1, round(opt.iterations / 10)) == 0:
+        	print('Saving snapshot of the network to %s.' % opt.network_out)
+        	torch.save(network.state_dict(), opt.network_out)
+	
+
+print('Saving snapshot of the network to %s.' % opt.network_out)
+torch.save(network.state_dict(), opt.network_out)
 
 print('Done without errors. Time: %.1f minutes.' % ((time.time() - training_start) / 60))
 train_log.close()
