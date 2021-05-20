@@ -25,7 +25,7 @@ class CamLocDataset(Dataset):
                 sparse=False, 
                 augment=False, 
                 warp=False,
-                aug_rotation=30, 
+                aug_inplane_rotation=30,
                 aug_scale_min=2/3, 
                 aug_scale_max=3/2, 
                 aug_contrast=0.1, 
@@ -42,7 +42,7 @@ class CamLocDataset(Dataset):
                         sparse: for mode = 1 (RGB+GT SC), load sparse initialization targets when True, load dense depth maps and generate initialization targets when False
                         augment: Use random data augmentation, note: not supported for mode = 2 (RGB-D) since pre-generateed eye coordinates cannot be agumented
                         warp: Use the warping to azimuthal equidistant projection
-                        aug_rotation: Max 2D image rotation angle, sampled uniformly around 0, both directions
+                        aug_inplane_rotation: Max 2D image rotation angle, sampled uniformly around 0, both directions
                         aug_scale_min: Lower limit of image scale factor for uniform sampling
                         aug_scale_min: Upper limit of image scale factor for uniform sampling
                         aug_contrast: Max relative scale factor for image contrast sampling, e.g. 0.1 -> [0.9,1.1]
@@ -59,13 +59,13 @@ class CamLocDataset(Dataset):
                 self.image_height = image_height
 
                 self.augment = augment
-                self.aug_rotation = aug_rotation
+                self.aug_inplane_rotation = aug_inplane_rotation
                 self.aug_scale_min = aug_scale_min
                 self.aug_scale_max = aug_scale_max
                 self.aug_contrast = aug_contrast
                 self.aug_brightness = aug_brightness
                 
-                if self.eye and self.augment and (self.aug_rotation > 0 or self.aug_scale_min != 1 or self.aug_scale_max != 1):
+                if self.eye and self.augment and (self.aug_inplane_rotation > 0 or self.aug_scale_min != 1 or self.aug_scale_max != 1):
                         print("WARNING: Check your augmentation settings. Camera coordinates will not be augmented.")
 
 
@@ -165,7 +165,7 @@ class CamLocDataset(Dataset):
                 if self.augment:
 
                         scale_factor = random.uniform(self.aug_scale_min, self.aug_scale_max)
-                        angle = random.uniform(-self.aug_rotation, self.aug_rotation)
+                        angle = random.uniform(-self.aug_inplane_rotation, self.aug_inplane_rotation)
 
                         # augment input image
                         if self.warp:

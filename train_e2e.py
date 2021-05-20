@@ -69,7 +69,7 @@ trainset = CamLocDataset(
         mode=(0 if opt.mode < 2 else opt.mode),
         augment=True,
         warp=opt.warp,
-        aug_rotation=0,
+        aug_inplane_rotation=0,
         aug_scale_min=1,
         aug_scale_max=1,
 ) # use only photometric augmentation, not rotation and scaling
