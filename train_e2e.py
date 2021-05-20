@@ -59,12 +59,16 @@ parser.add_argument('--session', '-sid', default='',
 parser.add_argument('--num_workers', '-numwork', type=int, default=4,
         help='number of workers in dataloader')
 
+parser.add_argument('--warp', '-warp', action='store_true',
+        help='Process the images by warping them to Azimuthal Equidistant projection. Warp all pixel coordinates accordingly.')
+
 opt = parser.parse_args()
 
 trainset = CamLocDataset(
         "./datasets/" + opt.scene + "/train",
         mode=(0 if opt.mode < 2 else opt.mode),
         augment=True,
+        warp=opt.warp,
         aug_rotation=0,
         aug_scale_min=1,
         aug_scale_max=1,

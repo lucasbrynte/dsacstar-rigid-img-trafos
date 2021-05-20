@@ -69,6 +69,7 @@ trainset = CamLocDataset(
         mode=min(opt.mode, 1),
         sparse=opt.sparse,
         augment=True,
+        warp=opt.warp,
 )
 trainset_loader = torch.utils.data.DataLoader(trainset, shuffle=True, num_workers=opt.num_workers)
 
