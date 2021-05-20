@@ -64,7 +64,12 @@ opt = parser.parse_args()
 use_init = opt.mode > 0
 
 # for RGB-D initialization, we utilize ground truth scene coordinates as in mode 2 (RGB + ground truth scene coordinates)
-trainset = CamLocDataset("./datasets/" + opt.scene + "/train", mode=min(opt.mode, 1), sparse=opt.sparse, augment=True)
+trainset = CamLocDataset(
+        "./datasets/" + opt.scene + "/train",
+        mode=min(opt.mode, 1),
+        sparse=opt.sparse,
+        augment=True,
+)
 trainset_loader = torch.utils.data.DataLoader(trainset, shuffle=True, num_workers=opt.num_workers)
 
 print("Found %d training images for %s." % (len(trainset), opt.scene))
