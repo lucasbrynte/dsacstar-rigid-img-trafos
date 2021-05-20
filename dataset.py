@@ -165,7 +165,7 @@ class CamLocDataset(Dataset):
                 if self.augment:
 
                         scale_factor = random.uniform(self.aug_scale_min, self.aug_scale_max)
-                        angle = random.uniform(-self.aug_inplane_rotation, self.aug_inplane_rotation)
+                        inplane_angle = random.uniform(-self.aug_inplane_rotation, self.aug_inplane_rotation)
 
                         # augment input image
                         if self.warp:
@@ -188,13 +188,13 @@ class CamLocDataset(Dataset):
                         focal_length *= scale_factor
 
                         # rotate input image
-                        def my_rot(t, angle, order, mode='constant'):
+                        def my_rot(t, inplane_angle, order, mode='constant'):
                                 t = t.permute(1,2,0).numpy()
-                                t = rotate(t, angle, order=order, mode=mode)
+                                t = rotate(t, inplane_angle, order=order, mode=mode)
                                 t = torch.from_numpy(t).permute(2, 0, 1).float()
                                 return t
 
-                        image = my_rot(image, angle, 1, 'reflect')
+                        image = my_rot(image, inplane_angle, 1, 'reflect')
 
                         if self.init:
 
@@ -204,19 +204,19 @@ class CamLocDataset(Dataset):
                                         coords_h = math.ceil(image.size(1) / Network.OUTPUT_SUBSAMPLE)
                                         coords = F.interpolate(coords.unsqueeze(0), size=(coords_h, coords_w))[0]
 
-                                        coords = my_rot(coords, angle, 0)
+                                        coords = my_rot(coords, inplane_angle, 0)
                                 else:
                                         #rotate and scale depth maps
                                         depth = resize(depth, image.shape[1:], order=0)
-                                        depth = rotate(depth, angle, order=0, mode='constant')
+                                        depth = rotate(depth, inplane_angle, order=0, mode='constant')
 
                         # rotate ground truth camera pose
-                        angle = angle * math.pi / 180
+                        inplane_angle = inplane_angle * math.pi / 180
                         pose_rot = torch.eye(4)
-                        pose_rot[0, 0] = math.cos(angle)
-                        pose_rot[0, 1] = -math.sin(angle)
-                        pose_rot[1, 0] = math.sin(angle)
-                        pose_rot[1, 1] = math.cos(angle)
+                        pose_rot[0, 0] = math.cos(inplane_angle)
+                        pose_rot[0, 1] = -math.sin(inplane_angle)
+                        pose_rot[1, 0] = math.sin(inplane_angle)
+                        pose_rot[1, 1] = math.cos(inplane_angle)
 
                         pose = torch.matmul(pose, pose_rot)                     
 
