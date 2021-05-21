@@ -176,7 +176,7 @@ for epoch in range(epochs):
                         # for pixel_coords corresponding to gt_coords/pixel_grid_crop 
                         # interpolate scene_coords to the original
                         # pixel coords
-
+                        
                         # crop pixel grid to gt_coords-size
                         pixel_grid_crop = pixel_grid[:,0:scene_coords.size(2),0:scene_coords.size(3)].clone()
                         # find the corresponding indices in the warped image
@@ -190,8 +190,13 @@ for epoch in range(epochs):
                                                                      image.shape[2:])  # image has shape [1,1,H,W]
                         # indices corresponding to the original warped image must be subsampled
                         # as the network subsamples
-                        idx_x = (idx_x - network.OUTPUT_SUBSAMPLE / 2) / network.OUTPUT_SUBSAMPLE
-                        idx_y = (idx_y - network.OUTPUT_SUBSAMPLE / 2) / network.OUTPUT_SUBSAMPLE
+                        idx_x = idx_x / network.OUTPUT_SUBSAMPLE  # (idx_x - network.OUTPUT_SUBSAMPLE)
+                        idx_y = idx_y / network.OUTPUT_SUBSAMPLE  # (idx_x - network.OUTPUT_SUBSAMPLE)
+
+                        # truncate too large values (seem to be small deviations)
+                        idx_x[idx_x > scene_coords.shape[3]-1] = scene_coords.shape[3]-1.00001
+                        idx_y[idx_y > scene_coords.shape[2]-1] = scene_coords.shape[2]-1.00001
+
 
                         # interpolate from the output of the network
                         if opt.unwarp_interp == "bilinear":

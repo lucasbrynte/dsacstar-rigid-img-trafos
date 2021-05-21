@@ -189,6 +189,9 @@ class CamLocDataset(Dataset):
                         ])
                         image = cur_image_transform(image)      
 
+                        # actual scale factor used:
+                        scale_factor = int(self.image_height * scale_factor) / self.image_height
+
                         # scale focal length
                         focal_length *= scale_factor
 

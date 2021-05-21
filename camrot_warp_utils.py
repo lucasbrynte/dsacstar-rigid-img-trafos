@@ -53,7 +53,7 @@ def calculate_image_border_angles_torch(fx, fy, px, py, one_based_indexing_for_p
         [px, mm, 1], # Down
         [1,  py, 1], # Left
         [nn, py, 1], # Right
-    ]).T
+    ], device=fx.device).T
     if not one_based_indexing_for_prewarp:
         xx[:2,:] -= 1
 
@@ -62,7 +62,7 @@ def calculate_image_border_angles_torch(fx, fy, px, py, one_based_indexing_for_p
     xx[1,:] = (xx[1,:] - py) / fy
 
     # Backproject 2D point to unit sphere
-    xxsph = xx / torch.norm(xx, axis=0, keepdims=True)
+    xxsph = xx / torch.norm(xx, dim=0, keepdim=True)
 
     angles = torch.arccos(xxsph[2,:])
     thy_min = -angles[0]
