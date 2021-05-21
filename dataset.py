@@ -215,7 +215,7 @@ class CamLocDataset(Dataset):
                                 R_tilt = spRotation.from_rotvec(tilt_axis * tilt_angle / 180. * math.pi).as_matrix()
 
                                 H = K @ R_tilt @ R_inplane @ np.linalg.inv(K)
-                                H_transform = ProjectiveTransform(H_transform)
+                                H_transform = ProjectiveTransform(H)
 
                         # rotate input image
                         def my_rot(t, inplane_angle, order, mode='constant'):
