@@ -173,12 +173,12 @@ for epoch in range(epochs):
                 scene_coords = network(image.cuda()) 
 
                 if opt.warp:
-                        # for pixel_coords corresponding to gt_coords 
+                        # for pixel_coords corresponding to gt_coords/pixel_grid_crop 
                         # interpolate scene_coords to the original
                         # pixel coords
 
                         # crop pixel grid to gt_coords-size
-                        pixel_grid_crop = pixel_grid[:,0:gt_coords.size(2),0:gt_coords.size(3)].clone()
+                        pixel_grid_crop = pixel_grid[:,0:scene_coords.size(2),0:scene_coords.size(3)].clone()
                         # find the corresponding indices in the warped image
                         idx_x, idx_y = radial_arctan_transform_torch(pixel_grid_crop[0],
                                                                      pixel_grid_crop[1],
