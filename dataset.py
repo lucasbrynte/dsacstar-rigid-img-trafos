@@ -17,6 +17,8 @@ from torchvision import transforms
 
 from network import Network
 
+from camrot_warp_utils import radial_tan_transform
+
 class CamLocDataset(Dataset):
         """Camera localization dataset.
 
@@ -293,7 +295,7 @@ class CamLocDataset(Dataset):
                         # reflect-padding chosen for the case that the predicted scene_coords are warped back
                         # - this requires some feasible output from the network at the edges of the
                         # warped image
-                        image = my_warp(image, inplane_angle, 1, 'reflect')  # constant? reflect?
+                        image = my_warp(image, 1, 'reflect')  # constant? reflect?
 
                 if self.init and not self.sparse:
                         # generate initialization targets from depth map
