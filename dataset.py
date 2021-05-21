@@ -179,6 +179,15 @@ class CamLocDataset(Dataset):
                         # scale focal length
                         focal_length *= scale_factor
 
+                        # The rotation is counter-clockwise around the negative z-axis, as this corresponds to counter-clockwise 2D rotation in the image plane.
+                        # Thus, the following defines the inverse rotation - a counter-clockwise rotation around the positive z-axis.
+                        R_inplane_inv = np.eye(3)
+                        R_inplane_inv[0, 0] = math.cos(inplane_angle * math.pi / 180)
+                        R_inplane_inv[0, 1] = -math.sin(inplane_angle * math.pi / 180)
+                        R_inplane_inv[1, 0] = math.sin(inplane_angle * math.pi / 180)
+                        R_inplane_inv[1, 1] = math.cos(inplane_angle * math.pi / 180)
+                        R_inplane = R_inplane_inv.T
+
                         # rotate input image
                         def my_rot(t, inplane_angle, order, mode='constant'):
                                 t = t.permute(1,2,0).numpy()
@@ -204,13 +213,13 @@ class CamLocDataset(Dataset):
 
                         # rotate ground truth camera pose
                         inplane_angle = inplane_angle * math.pi / 180
-                        pose_rot = torch.eye(4)
-                        pose_rot[0, 0] = math.cos(inplane_angle)
-                        pose_rot[0, 1] = -math.sin(inplane_angle)
-                        pose_rot[1, 0] = math.sin(inplane_angle)
-                        pose_rot[1, 1] = math.cos(inplane_angle)
+                        # Define a 4x4 matrix for the inverse rotation:
+                        T_inplane_inv = torch.eye(4)
+                        T_inplane_inv[:3, :3] = torch.from_numpy(R_inplane.T).float()
 
-                        pose = torch.matmul(pose, pose_rot)                     
+                        # "pose" is a 4x4 Euclidean transformation which maps camera coordinates to scene coordinates, i.e. it is the inverse of the extrinsic camera parameters.
+                        # In order to integrate the transformations of the augmentations, these should be applied in inverse as well, and multiplied from the right.
+                        pose = torch.matmul(pose, T_inplane_inv)
 
                 else:
                         image = self.image_transform(image)     
