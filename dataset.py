@@ -83,19 +83,16 @@ class CamLocDataset(Dataset):
                 self.rgb_files = [rgb_dir + f for f in self.rgb_files]
                 self.rgb_files.sort()
 
-                if self.warp:
-                        raise NotImplementedError("warp images by changing the image_transform")
-                else:
-                        self.image_transform = transforms.Compose([
-                            transforms.ToPILImage(),
-                            transforms.Resize(self.image_height),
-                            transforms.Grayscale(),
-                            transforms.ToTensor(),
-                            transforms.Normalize(
-                                mean=[0.4], # statistics calculated over 7scenes training set, should generalize fairly well
-                                std=[0.25]
-                            )
-                        ])
+                self.image_transform = transforms.Compose([
+                    transforms.ToPILImage(),
+                    transforms.Resize(self.image_height),
+                    transforms.Grayscale(),
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        mean=[0.4], # statistics calculated over 7scenes training set, should generalize fairly well
+                        std=[0.25]
+                    )
+                ])
 
                 self.pose_files = os.listdir(pose_dir)
                 self.pose_files = [pose_dir + f for f in self.pose_files]
@@ -157,8 +154,6 @@ class CamLocDataset(Dataset):
                                 depth /= 1000 # from millimeters to meters
                 elif self.eye: 
                         coords = torch.load(self.coord_files[idx])
-                        if self.warp:
-                                raise NotImplementedError("warp GT-camera coords")
                 else:
                         coords = 0
 
@@ -168,20 +163,17 @@ class CamLocDataset(Dataset):
                         inplane_angle = random.uniform(-self.aug_inplane_rotation, self.aug_inplane_rotation)
 
                         # augment input image
-                        if self.warp:
-                                raise NotImplementedError("warp images by changing the image_transform")
-                        else:
-                                cur_image_transform = transforms.Compose([
-                                        transforms.ToPILImage(),
-                                        transforms.Resize(int(self.image_height * scale_factor)),
-                                        transforms.Grayscale(),
-                                        transforms.ColorJitter(brightness=self.aug_brightness, contrast=self.aug_contrast),
-                                        transforms.ToTensor(),
-                                        transforms.Normalize(
-                                                mean=[0.4],
-                                                std=[0.25]
-                                                )
-                                ])
+                        cur_image_transform = transforms.Compose([
+                                transforms.ToPILImage(),
+                                transforms.Resize(int(self.image_height * scale_factor)),
+                                transforms.Grayscale(),
+                                transforms.ColorJitter(brightness=self.aug_brightness, contrast=self.aug_contrast),
+                                transforms.ToTensor(),
+                                transforms.Normalize(
+                                        mean=[0.4],
+                                        std=[0.25]
+                                        )
+                        ])
                         image = cur_image_transform(image)      
 
                         # scale focal length
@@ -221,14 +213,44 @@ class CamLocDataset(Dataset):
                         pose = torch.matmul(pose, pose_rot)                     
 
                 else:
-
                         image = self.image_transform(image)     
 
-                if self.init and self.sparse and self.warp:
-                        raise NotImplementedError("warp sparse scene coords")
+                # warp input image
+                def my_warp(t, order, mode='constant'):
+                        def warp_inverse_map(arr):
+                                """
+                                        Transforms coordinates from the warped image to the
+                                        input image.
+                                        arr is a (M, 2) array of (col, row) coordinates in
+                                        the warped image.
+                                """
+                                x, y = radial_tan_transform(arr[:, 0],
+                                                            arr[:, 1],
+                                                            focal_length,
+                                                            focal_length,
+                                                            image.shape[2]/2,
+                                                            image.shape[1]/2,
+                                                            False,
+                                                            image.shape[1:])
+                                arr[:, 0] = x
+                                arr[:, 1] = y
+                                return arr
+
+
+                        t = t.permute(1,2,0).numpy()
+                        t = warp(t, warp_inverse_map, order=order, mode=mode)
+                        t = torch.from_numpy(t).permute(2, 0, 1).float()
+                        return t
+
+                if self.warp:
+                        # reflect-padding chosen for the case that the predicted scene_coords are warped back
+                        # - this requires some feasible output from the network at the edges of the
+                        # warped image
+                        image = my_warp(image, inplane_angle, 1, 'reflect')  # constant? reflect?
 
                 if self.init and not self.sparse:
-                        #generate initialization targets from depth map
+                        # generate initialization targets from depth map
+
                         
                         offsetX = int(Network.OUTPUT_SUBSAMPLE/2)
                         offsetY = int(Network.OUTPUT_SUBSAMPLE/2)
@@ -237,9 +259,6 @@ class CamLocDataset(Dataset):
                                 3, 
                                 math.ceil(image.shape[1] / Network.OUTPUT_SUBSAMPLE), 
                                 math.ceil(image.shape[2] / Network.OUTPUT_SUBSAMPLE)))
-
-                        if self.warp:
-                                raise NotImplementedError("warp depth maps")
 
                         # subsample to network output size
                         depth = depth[offsetY::Network.OUTPUT_SUBSAMPLE,offsetX::Network.OUTPUT_SUBSAMPLE] 

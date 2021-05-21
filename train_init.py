@@ -8,6 +8,9 @@ import math
 from dataset import CamLocDataset
 from network import Network
 
+from camrot_warp_utils import radial_arctan_transform_torch
+from pytorch_interpolate import interp_bilinear, interp_nearest_nb
+
 parser = argparse.ArgumentParser(
         description='Initialize a scene coordinate regression network.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -67,6 +70,9 @@ parser.add_argument('--aug-scale-range', type=float, nargs=2, default=(2/3, 3/2)
 
 parser.add_argument('--aug-inplane-rot-max', type=float, default=30,
         help='Maximum angle for in-plane rotation augmentation.')
+
+parser.add_argument('--unwarp_interp', default='bilinear',
+        help='interpolation type for unwarping - bilinear or nearest_nb')
 
 opt = parser.parse_args()
 
@@ -158,6 +164,35 @@ for epoch in range(epochs):
                 cam_mat = cam_mat.cuda()
 
                 scene_coords = network(image.cuda()) 
+
+                if opt.warp:
+                        # for pixel_coords corresponding to gt_coords 
+                        # interpolate scene_coords to the original
+                        # pixel coords
+
+                        # crop pixel grid to gt_coords-size
+                        pixel_grid_crop = pixel_grid[:,0:gt_coords.size(2),0:gt_coords.size(3)].clone()
+                        # find the corresponding indices in the warped image
+                        idx_x, idx_y = radial_arctan_transform_torch(pixel_grid_crop[0],
+                                                                     pixel_grid_crop[1],
+                                                                     cam_mat[0, 0],
+                                                                     cam_mat[1, 1],
+                                                                     cam_mat[0, 2],
+                                                                     cam_mat[1, 2],
+                                                                     False,
+                                                                     image.shape[2:])  # image has shape [1,1,H,W]
+                        # indices corresponding to the original warped image must be subsampled
+                        # as the network subsamples
+                        idx_x = (idx_x - network.OUTPUT_SUBSAMPLE / 2) / network.OUTPUT_SUBSAMPLE
+                        idx_y = (idx_y - network.OUTPUT_SUBSAMPLE / 2) / network.OUTPUT_SUBSAMPLE
+
+                        # interpolate from the output of the network
+                        if opt.unwarp_interp == "bilinear":
+                                scene_coords = interp_bilinear(scene_coords, idx_x, idx_y)
+                        elif opt.unwarp_interp == "nearest_nb":
+                                scene_coords = interp_nearest_nb(scene_coords, idx_x, idx_y)
+                        else:
+                                raise ValueError("opt.unwarp_interp must be bilinear or nearest_nb")
 
                 # calculate loss dependant on the mode
 
