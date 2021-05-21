@@ -256,10 +256,9 @@ class CamLocDataset(Dataset):
 
                         # "pose" is a 4x4 Euclidean transformation which maps camera coordinates to scene coordinates, i.e. it is the inverse of the extrinsic camera parameters.
                         # In order to integrate the transformations of the augmentations, these should be applied in inverse as well, and multiplied from the right.
+                        pose = torch.matmul(pose, T_inplane_inv)
                         if tilt_enabled:
-                                pose = torch.matmul(pose, T_inplane_inv, T_tilt_inv)
-                        else:
-                                pose = torch.matmul(pose, T_inplane_inv)
+                                pose = torch.matmul(pose, T_tilt_inv)
 
                 else:
                         image = self.image_transform(image)     
