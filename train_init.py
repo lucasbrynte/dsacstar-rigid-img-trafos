@@ -62,8 +62,11 @@ parser.add_argument('--num_workers', '-numwork', type=int, default=4,
 parser.add_argument('--warp', '-warp', action='store_true',
         help='Process the images by warping them to Azimuthal Equidistant projection. Warp all pixel coordinates accordingly.')
 
-parser.add_argument('--no-geometric-aug', action='store_true',
-        help='Disable geometric data augmentation.')
+parser.add_argument('--no-aug', action='store_true',
+        help='Disable data augmentation.')
+
+# parser.add_argument('--no-geometric-aug', action='store_true',
+#         help='Disable geometric data augmentation.')
 
 parser.add_argument('--aug-scale-range', type=float, nargs=2, default=(2/3, 3/2),
         help='Maximum angle for inplane rotation augmentation.')
@@ -89,7 +92,7 @@ trainset = CamLocDataset(
         "./datasets/" + opt.scene + "/train",
         mode=min(opt.mode, 1),
         sparse=opt.sparse,
-        augment=not opt.no_geometric_aug,
+        augment=not opt.no_aug,
         warp=opt.warp,
         aug_inplane_rotation=opt.aug_inplane_rot_max,
         aug_tilt_rotation=opt.aug_tilt_rot_max,
