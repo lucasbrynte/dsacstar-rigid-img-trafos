@@ -3,9 +3,12 @@ import numpy as np
 import random
 import math
 
+from scipy.spatial.transform import Rotation as spRotation
 from skimage import io
 from skimage import color
+from skimage.transform import warp
 from skimage.transform import rotate, resize
+from skimage.transform import ProjectiveTransform
 
 import torch
 import torch.nn.functional as F
@@ -26,6 +29,7 @@ class CamLocDataset(Dataset):
                 augment=False, 
                 warp=False,
                 aug_inplane_rotation=30,
+                aug_tilt_rotation=20,
                 aug_scale_min=2/3, 
                 aug_scale_max=3/2, 
                 aug_contrast=0.1, 
@@ -43,6 +47,7 @@ class CamLocDataset(Dataset):
                         augment: Use random data augmentation, note: not supported for mode = 2 (RGB-D) since pre-generateed eye coordinates cannot be agumented
                         warp: Use the warping to azimuthal equidistant projection
                         aug_inplane_rotation: Max 2D image rotation angle, sampled uniformly around 0, both directions
+                        aug_tilt_rotation: Max tilt rotation angle, sampled uniformly around 0, both directions. This is a rotation around a (random) axis in the principal plane.
                         aug_scale_min: Lower limit of image scale factor for uniform sampling
                         aug_scale_min: Upper limit of image scale factor for uniform sampling
                         aug_contrast: Max relative scale factor for image contrast sampling, e.g. 0.1 -> [0.9,1.1]
@@ -60,12 +65,13 @@ class CamLocDataset(Dataset):
 
                 self.augment = augment
                 self.aug_inplane_rotation = aug_inplane_rotation
+                self.aug_tilt_rotation = aug_tilt_rotation
                 self.aug_scale_min = aug_scale_min
                 self.aug_scale_max = aug_scale_max
                 self.aug_contrast = aug_contrast
                 self.aug_brightness = aug_brightness
                 
-                if self.eye and self.augment and (self.aug_inplane_rotation > 0 or self.aug_scale_min != 1 or self.aug_scale_max != 1):
+                if self.eye and self.augment and (self.aug_inplane_rotation > 0 or self.aug_tilt_rotation > 0 or self.aug_scale_min != 1 or self.aug_scale_max != 1):
                         print("WARNING: Check your augmentation settings. Camera coordinates will not be augmented.")
 
 
@@ -161,6 +167,11 @@ class CamLocDataset(Dataset):
 
                         scale_factor = random.uniform(self.aug_scale_min, self.aug_scale_max)
                         inplane_angle = random.uniform(-self.aug_inplane_rotation, self.aug_inplane_rotation)
+                        tilt_angle = random.uniform(-self.aug_tilt_rotation, self.aug_tilt_rotation)
+                        tmp_inplane_alpha = random.uniform(0, 2*math.pi)
+                        tilt_axis = np.array([np.cos(tmp_inplane_alpha), np.sin(tmp_inplane_alpha), 0])
+
+                        tilt_enabled = not np.isclose(tilt_angle, 0)
 
                         # augment input image
                         cur_image_transform = transforms.Compose([
@@ -179,6 +190,9 @@ class CamLocDataset(Dataset):
                         # scale focal length
                         focal_length *= scale_factor
 
+                        # Image has now been resized to another resolution, and focal length has been rescaled accordingly.
+                        # The principal point has also been effectively rescaled, such that it is still at the center of the image at the new resolution.
+
                         # The rotation is counter-clockwise around the negative z-axis, as this corresponds to counter-clockwise 2D rotation in the image plane.
                         # Thus, the following defines the inverse rotation - a counter-clockwise rotation around the positive z-axis.
                         R_inplane_inv = np.eye(3)
@@ -188,10 +202,26 @@ class CamLocDataset(Dataset):
                         R_inplane_inv[1, 1] = math.cos(inplane_angle * math.pi / 180)
                         R_inplane = R_inplane_inv.T
 
+                        if tilt_enabled:
+                                # Define camera calibration matrix, taking into account the new focal length and principal point after image resize:
+                                K = np.eye(3)
+                                K[0,0] = focal_length
+                                K[1,1] = focal_length
+                                K[0,2] = image.size(2) / 2 # px
+                                K[1,2] = image.size(1) / 2 # py
+
+                                R_tilt = spRotation.from_rotvec(tilt_axis * tilt_angle / 180. * math.pi).as_matrix()
+
+                                H = K @ R_tilt @ R_inplane @ np.linalg.inv(K)
+                                H_transform = ProjectiveTransform(H_transform)
+
                         # rotate input image
                         def my_rot(t, inplane_angle, order, mode='constant'):
                                 t = t.permute(1,2,0).numpy()
-                                t = rotate(t, inplane_angle, order=order, mode=mode)
+                                if tilt_enabled:
+                                        t = warp(t, H_transform, order=order, mode=mode)
+                                else:
+                                        t = rotate(t, inplane_angle, order=order, mode=mode)
                                 t = torch.from_numpy(t).permute(2, 0, 1).float()
                                 return t
 
@@ -217,9 +247,17 @@ class CamLocDataset(Dataset):
                         T_inplane_inv = torch.eye(4)
                         T_inplane_inv[:3, :3] = torch.from_numpy(R_inplane.T).float()
 
+                        if tilt_enabled:
+                                # Define a 4x4 matrix for the inverse rotation:
+                                T_tilt_inv = torch.eye(4)
+                                T_tilt_inv[:3, :3] = torch.from_numpy(R_tilt.T).float()
+
                         # "pose" is a 4x4 Euclidean transformation which maps camera coordinates to scene coordinates, i.e. it is the inverse of the extrinsic camera parameters.
                         # In order to integrate the transformations of the augmentations, these should be applied in inverse as well, and multiplied from the right.
-                        pose = torch.matmul(pose, T_inplane_inv)
+                        if tilt_enabled:
+                                pose = torch.matmul(pose, T_inplane_inv, T_tilt_inv)
+                        else:
+                                pose = torch.matmul(pose, T_inplane_inv)
 
                 else:
                         image = self.image_transform(image)     
