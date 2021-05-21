@@ -148,8 +148,10 @@ pixel_grid = torch.zeros((2,
 
 for x in range(0, pixel_grid.size(2)):
         for y in range(0, pixel_grid.size(1)):
-                pixel_grid[0, y, x] = x * network.OUTPUT_SUBSAMPLE + network.OUTPUT_SUBSAMPLE / 2
-                pixel_grid[1, y, x] = y * network.OUTPUT_SUBSAMPLE + network.OUTPUT_SUBSAMPLE / 2
+                # pixel_grid[0, y, x] = x * network.OUTPUT_SUBSAMPLE + network.OUTPUT_SUBSAMPLE / 2
+                # pixel_grid[1, y, x] = y * network.OUTPUT_SUBSAMPLE + network.OUTPUT_SUBSAMPLE / 2
+                pixel_grid[0, y, x] = x * network.OUTPUT_SUBSAMPLE
+                pixel_grid[1, y, x] = y * network.OUTPUT_SUBSAMPLE
 
 pixel_grid = pixel_grid.cuda()
 
@@ -190,8 +192,11 @@ for epoch in range(epochs):
                                                                      image.shape[2:])  # image has shape [1,1,H,W]
                         # indices corresponding to the original warped image must be subsampled
                         # as the network subsamples
-                        idx_x = idx_x / network.OUTPUT_SUBSAMPLE  # (idx_x - network.OUTPUT_SUBSAMPLE)
-                        idx_y = idx_y / network.OUTPUT_SUBSAMPLE  # (idx_x - network.OUTPUT_SUBSAMPLE)
+
+                        # idx_x = (idx_x - network.OUTPUT_SUBSAMPLE / 2) / network.OUTPUT_SUBSAMPLE
+                        # idx_y = (idx_y - network.OUTPUT_SUBSAMPLE / 2) / network.OUTPUT_SUBSAMPLE
+                        idx_x = idx_x / network.OUTPUT_SUBSAMPLE
+                        idx_y = idx_y / network.OUTPUT_SUBSAMPLE
 
                         # truncate too large values (seem to be small deviations)
                         idx_x[idx_x > scene_coords.shape[3]-1] = scene_coords.shape[3]-1.00001

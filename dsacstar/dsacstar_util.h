@@ -67,9 +67,12 @@ namespace dsacstar
 		for(unsigned x = 0; x < outW; x++)
 		for(unsigned y = 0; y < outH; y++)
 		{
+			// sampling(y, x) = cv::Point2i(
+			// 	x * subSampling + subSampling / 2 - shiftX,
+			// 	y * subSampling + subSampling / 2 - shiftY);
 			sampling(y, x) = cv::Point2i(
-				x * subSampling + subSampling / 2 - shiftX,
-				y * subSampling + subSampling / 2 - shiftY);
+				x * subSampling - shiftX,
+				y * subSampling - shiftY);
 		}
 
 		return sampling;

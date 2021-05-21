@@ -303,8 +303,10 @@ class CamLocDataset(Dataset):
                         # generate initialization targets from depth map
 
                         
-                        offsetX = int(Network.OUTPUT_SUBSAMPLE/2)
-                        offsetY = int(Network.OUTPUT_SUBSAMPLE/2)
+                        # offsetX = int(Network.OUTPUT_SUBSAMPLE/2)
+                        # offsetY = int(Network.OUTPUT_SUBSAMPLE/2)
+                        offsetX = 0
+                        offsetY = 0
 
                         coords = torch.zeros((
                                 3, 
@@ -342,6 +344,8 @@ class CamLocDataset(Dataset):
                         sc[:, depth > 1000] = 0
                         sc = torch.from_numpy(sc[0:3])
 
-                        coords[:,:sc.shape[1],:sc.shape[2]] = sc
+                        # coords[:,:sc.shape[1],:sc.shape[2]] = sc
+                        assert sc.shape == coords.shape, 'sc.shape {} not consistent with coords.shape {}'.format(tuple(sc.shape), tuple(coords.shape))
+                        coords[:,:,:] = sc
 
                 return image, pose, coords, focal_length, self.rgb_files[idx]
