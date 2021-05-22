@@ -3,12 +3,15 @@ import torch.optim as optim
 
 import argparse
 import time
+import math
 import random
 
 import dsacstar
 
 from dataset import CamLocDataset
 from network import Network
+
+from camrot_warp_utils import radial_arctan_transform_torch
 from pytorch_interpolate import interp_bilinear, interp_nearest_nb
 
 parser = argparse.ArgumentParser(
