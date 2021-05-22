@@ -233,7 +233,7 @@ class CamLocDataset(Dataset):
                                 t = torch.from_numpy(t).permute(2, 0, 1).float()
                                 return t
 
-                        image = my_rot(image, inplane_angle, 1, 'reflect')
+                        image = my_rot(image, inplane_angle, 1, mode='reflect')
 
                         if self.init or self.eye:
 
@@ -243,7 +243,7 @@ class CamLocDataset(Dataset):
                                         coords_h = math.ceil(image.size(1) / Network.OUTPUT_SUBSAMPLE)
                                         coords = F.interpolate(coords.unsqueeze(0), size=(coords_h, coords_w))[0]
 
-                                        coords = my_rot(coords, inplane_angle, 0)
+                                        coords = my_rot(coords, inplane_angle, 0, mode='constant')
                                 else:
                                         #rotate and scale depth maps
                                         depth = resize(depth, image.shape[1:], order=0)
@@ -300,7 +300,7 @@ class CamLocDataset(Dataset):
                         # reflect-padding chosen for the case that the predicted scene_coords are warped back
                         # - this requires some feasible output from the network at the edges of the
                         # warped image
-                        image = my_warp(image, 1, 'reflect')  # constant? reflect?
+                        image = my_warp(image, 1, mode='reflect')  # constant? reflect?
 
                 if (self.init or self.eye) and not self.sparse:
                         # init: generate initialization targets from depth map
