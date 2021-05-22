@@ -73,14 +73,15 @@ class CamLocDataset(Dataset):
                 self.aug_contrast = aug_contrast
                 self.aug_brightness = aug_brightness
                 
-                if self.eye and self.augment and (self.aug_inplane_rotation > 0 or self.aug_tilt_rotation > 0 or self.aug_scale_min != 1 or self.aug_scale_max != 1):
+                #if self.eye and self.augment and (self.aug_inplane_rotation > 0 or self.aug_tilt_rotation > 0 or self.aug_scale_min != 1 or self.aug_scale_max != 1):
+                if self.eye and self.sparse and self.augment and (self.aug_inplane_rotation > 0 or self.aug_tilt_rotation > 0 or self.aug_scale_min != 1 or self.aug_scale_max != 1):
                         print("WARNING: Check your augmentation settings. Camera coordinates will not be augmented.")
 
 
                 rgb_dir = root_dir + '/rgb/'
                 pose_dir =  root_dir + '/poses/'
                 calibration_dir = root_dir + '/calibration/'
-                if self.eye:
+                if self.eye and self.sparse:
                         coord_dir =  root_dir + '/eye/'
                 elif self.sparse:
                         coord_dir =  root_dir + '/init/'
@@ -153,15 +154,17 @@ class CamLocDataset(Dataset):
                 pose = np.loadtxt(self.pose_files[idx])
                 pose = torch.from_numpy(pose).float()
 
-                if self.init:
+                if self.init or self.eye:
                         if self.sparse:
                                 coords = torch.load(self.coord_files[idx])
                         else:
                                 depth = io.imread(self.coord_files[idx])
                                 depth = depth.astype(np.float64)
                                 depth /= 1000 # from millimeters to meters
-                elif self.eye: 
-                        coords = torch.load(self.coord_files[idx])
+                # instead of loading precomputed camera coords, we compute them online to allow
+                # data augmentation
+                #elif self.eye: 
+                #        coords = torch.load(self.coord_files[idx])
                 else:
                         coords = 0
 
@@ -232,7 +235,7 @@ class CamLocDataset(Dataset):
 
                         image = my_rot(image, inplane_angle, 1, 'reflect')
 
-                        if self.init:
+                        if self.init or self.eye:
 
                                 if self.sparse:
                                         #rotate and scale initalization targets
@@ -299,8 +302,9 @@ class CamLocDataset(Dataset):
                         # warped image
                         image = my_warp(image, 1, 'reflect')  # constant? reflect?
 
-                if self.init and not self.sparse:
-                        # generate initialization targets from depth map
+                if (self.init or self.eye) and not self.sparse:
+                        # init: generate initialization targets from depth map
+                        # eye: generate camera coords from depth map
 
                         
                         # offsetX = int(Network.OUTPUT_SUBSAMPLE/2)
@@ -333,19 +337,30 @@ class CamLocDataset(Dataset):
                         eye = np.ndarray((4, depth.shape[0], depth.shape[1]))
                         eye[0:2] = xy
                         eye[2] = depth
-                        eye[3] = 1
+                        
+                        if self.init:
+                                eye[3] = 1
+                                # eye to scene coordinates
+                                sc = np.matmul(pose.numpy(), eye.reshape(4,-1))
+                                sc = sc.reshape(4, depth.shape[0], depth.shape[1])
 
-                        # eye to scene coordinates
-                        sc = np.matmul(pose.numpy(), eye.reshape(4,-1))
-                        sc = sc.reshape(4, depth.shape[0], depth.shape[1])
+                                # mind pixels with invalid depth
+                                sc[:, depth == 0] = 0
+                                sc[:, depth > 1000] = 0
+                                sc = torch.from_numpy(sc[0:3])
 
-                        # mind pixels with invalid depth
-                        sc[:, depth == 0] = 0
-                        sc[:, depth > 1000] = 0
-                        sc = torch.from_numpy(sc[0:3])
+                                # coords[:,:sc.shape[1],:sc.shape[2]] = sc
+                                assert sc.shape == coords.shape, 'sc.shape {} not consistent with coords.shape {}'.format(tuple(sc.shape), tuple(coords.shape))
+                                coords[:,:,:] = sc
+                        elif self.eye:
+                                # don't map to scene coordinates in this case!
 
-                        # coords[:,:sc.shape[1],:sc.shape[2]] = sc
-                        assert sc.shape == coords.shape, 'sc.shape {} not consistent with coords.shape {}'.format(tuple(sc.shape), tuple(coords.shape))
-                        coords[:,:,:] = sc
+                                # mind pixels with invalid depth
+                                eye[:, depth == 0] = 0
+                                eye[:, depth > 1000] = 0
+                                eye = torch.from_numpy(eye[0:3])
+
+                                assert eye.shape == coords.shape, 'eye.shape {} not consistent with coords.shape {}'.format(tuple(eye.shape), tuple(coords.shape))
+                                coords[:,:,:] = eye
 
                 return image, pose, coords, focal_length, self.rgb_files[idx]
