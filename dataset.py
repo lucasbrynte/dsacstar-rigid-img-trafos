@@ -249,7 +249,7 @@ class CamLocDataset(Dataset):
                                 else:
                                         #rotate and scale depth maps
                                         depth = resize(depth, image.shape[1:], order=0)
-                                        my_rot(t, inplane_angle, order, mode='constant', img_is_pt_tensor=False)
+                                        depth = my_rot(depth, inplane_angle, order, mode='constant', img_is_pt_tensor=False)
                                         # depth = rotate(depth, inplane_angle, order=0, mode='constant')
 
                         # rotate ground truth camera pose
