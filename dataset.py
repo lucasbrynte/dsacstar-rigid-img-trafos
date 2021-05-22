@@ -237,7 +237,7 @@ class CamLocDataset(Dataset):
 
                         if self.init or self.eye:
 
-                                if self.sparse:
+                                if self.sparse and self.init:
                                         #rotate and scale initalization targets
                                         coords_w = math.ceil(image.size(2) / Network.OUTPUT_SUBSAMPLE)
                                         coords_h = math.ceil(image.size(1) / Network.OUTPUT_SUBSAMPLE)
