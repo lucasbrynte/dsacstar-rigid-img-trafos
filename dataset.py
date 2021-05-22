@@ -224,7 +224,7 @@ class CamLocDataset(Dataset):
                         def my_rot(t, inplane_angle, order, mode='constant'):
                                 t = t.permute(1,2,0).numpy()
                                 if tilt_enabled:
-                                        t = warp(t, H_transform, order=order, mode=mode)
+                                        t = warp(t, H_transform.inverse, order=order, mode=mode)
                                 else:
                                         t = rotate(t, inplane_angle, order=order, mode=mode)
                                 t = torch.from_numpy(t).permute(2, 0, 1).float()
