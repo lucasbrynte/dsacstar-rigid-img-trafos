@@ -224,16 +224,18 @@ class CamLocDataset(Dataset):
                                 H_transform = ProjectiveTransform(H)
 
                         # rotate input image
-                        def my_rot(t, inplane_angle, order, mode='constant'):
-                                t = t.permute(1,2,0).numpy()
+                        def my_rot(t, inplane_angle, order, mode='constant', img_is_pt_tensor=True):
+                                if img_is_pt_tensor:
+                                        t = t.permute(1,2,0).numpy()
                                 if tilt_enabled:
                                         t = warp(t, H_transform.inverse, order=order, mode=mode)
                                 else:
                                         t = rotate(t, inplane_angle, order=order, mode=mode)
-                                t = torch.from_numpy(t).permute(2, 0, 1).float()
+                                if img_is_pt_tensor:
+                                        t = torch.from_numpy(t).permute(2, 0, 1).float()
                                 return t
 
-                        image = my_rot(image, inplane_angle, 1, mode='reflect')
+                        image = my_rot(image, inplane_angle, 1, mode='reflect', img_is_pt_tensor=True)
 
                         if self.init or self.eye:
 
@@ -243,11 +245,12 @@ class CamLocDataset(Dataset):
                                         coords_h = math.ceil(image.size(1) / Network.OUTPUT_SUBSAMPLE)
                                         coords = F.interpolate(coords.unsqueeze(0), size=(coords_h, coords_w))[0]
 
-                                        coords = my_rot(coords, inplane_angle, 0, mode='constant')
+                                        coords = my_rot(coords, inplane_angle, 0, mode='constant', img_is_pt_tensor=True)
                                 else:
                                         #rotate and scale depth maps
                                         depth = resize(depth, image.shape[1:], order=0)
-                                        depth = rotate(depth, inplane_angle, order=0, mode='constant')
+                                        my_rot(t, inplane_angle, order, mode='constant', img_is_pt_tensor=False)
+                                        # depth = rotate(depth, inplane_angle, order=0, mode='constant')
 
                         # rotate ground truth camera pose
                         inplane_angle = inplane_angle * math.pi / 180
