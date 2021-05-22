@@ -60,7 +60,7 @@ parser.add_argument('--num_workers', '-numwork', type=int, default=4,
         help='number of workers in dataloader')
 
 parser.add_argument('--warp', '-warp', action='store_true',
-        help='Process the images by warping them to Azimuthal Equidistant projection. Warp all pixel coordinates accordingly.')
+        help='Process the images by warping them to Azimuthal Equidistant projecti in the application of the CNN.')
 
 parser.add_argument('--no-aug', action='store_true',
         help='Disable data augmentation.')
