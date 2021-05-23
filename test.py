@@ -12,6 +12,9 @@ import math
 from dataset import CamLocDataset
 from network import Network
 
+from camrot_warp_utils import radial_arctan_transform_torch
+from pytorch_interpolate import interp_bilinear, interp_nearest_nb
+
 parser = argparse.ArgumentParser(
         description='Test a trained network on a specific scene.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -32,8 +35,8 @@ parser.add_argument('--inlieralpha', '-ia', type=float, default=100,
 parser.add_argument('--maxpixelerror', '-maxerrr', type=float, default=100, 
         help='maximum reprojection (RGB, in px) or 3D distance (RGB-D, in cm) error when checking pose consistency towards all measurements; error is clamped to this value for stability')
 
-parser.add_argument('--mode', '-m', type=int, default=1, choices=[1,2],
-        help='test mode: 1 = RGB, 2 = RGB-D')
+parser.add_argument('--mode', '-m', type=int, default=1, choices=[0,1,2],
+        help='test mode: 0,1 = RGB, 2 = RGB-D')
 
 parser.add_argument('--tiny', '-tiny', action='store_true',
         help='Load a model with massively reduced capacity for a low memory footprint.')
@@ -41,12 +44,21 @@ parser.add_argument('--tiny', '-tiny', action='store_true',
 parser.add_argument('--session', '-sid', default='',
         help='custom session name appended to output files, useful to separate different runs of a script')
 
+parser.add_argument('--num_workers', '-numwork', type=int, default=4,
+        help='number of workers in dataloader')
+
+parser.add_argument('--warp', '-warp', action='store_true',
+        help='Process the images by warping them to Azimuthal Equidistant projection in the application of the CNN.')
+
+parser.add_argument('--unwarp_interp', default='bilinear',
+        help='interpolation type for unwarping - bilinear or nearest_nb')
+
 opt = parser.parse_args()
 
 # setup dataset
 if opt.mode < 2: opt.mode = 0 # we do not load ground truth scene coordinates when testing
-testset = CamLocDataset("./datasets/" + opt.scene + "/test", mode = opt.mode)
-testset_loader = torch.utils.data.DataLoader(testset, shuffle=False, num_workers=6)
+testset = CamLocDataset("./datasets/" + opt.scene + "/test", mode = opt.mode, warp=opt.warp)
+testset_loader = torch.utils.data.DataLoader(testset, shuffle=False, num_workers=opt.num_workers)
 
 # load network
 network = Network(torch.zeros((3)), opt.tiny)
@@ -68,6 +80,20 @@ pct5 = 0
 pct2 = 0
 pct1 = 0
 
+# generate grid of target rewarping pixel positions
+pixel_grid = torch.zeros((2, 
+        math.ceil(5000 / network.OUTPUT_SUBSAMPLE),             # 5000px is max limit of image size, increase if needed
+        math.ceil(5000 / network.OUTPUT_SUBSAMPLE)))
+
+for x in range(0, pixel_grid.size(2)):
+        for y in range(0, pixel_grid.size(1)):
+                # pixel_grid[0, y, x] = x * network.OUTPUT_SUBSAMPLE + network.OUTPUT_SUBSAMPLE / 2
+                # pixel_grid[1, y, x] = y * network.OUTPUT_SUBSAMPLE + network.OUTPUT_SUBSAMPLE / 2
+                pixel_grid[0, y, x] = x * network.OUTPUT_SUBSAMPLE
+                pixel_grid[1, y, x] = y * network.OUTPUT_SUBSAMPLE
+
+pixel_grid = pixel_grid.cuda()
+
 with torch.no_grad():   
 
         for image, gt_pose, init, focal_length, file in testset_loader:
@@ -77,10 +103,55 @@ with torch.no_grad():
                 gt_pose = gt_pose[0]
                 image = image.cuda()
 
+                cam_mat = torch.eye(3)
+                cam_mat[0, 0] = focal_length
+                cam_mat[1, 1] = focal_length
+                cam_mat[0, 2] = image.size(3) / 2
+                cam_mat[1, 2] = image.size(2) / 2
+                cam_mat = cam_mat.cuda()
+
                 start_time = time.time()
 
                 # predict scene coordinates and neural guidance
                 scene_coordinates = network(image)
+                if opt.warp:
+                        # for pixel_coords corresponding to gt_coords/pixel_grid_crop 
+                        # interpolate scene_coordinates to the original
+                        # pixel coords
+                        
+                        # crop pixel grid to gt_coords-size
+                        pixel_grid_crop = pixel_grid[:,0:scene_coordinates.size(2),0:scene_coordinates.size(3)].clone()
+                        # find the corresponding indices in the warped image
+                        idx_x, idx_y = radial_arctan_transform_torch(pixel_grid_crop[0],
+                                                                     pixel_grid_crop[1],
+                                                                     cam_mat[0, 0],
+                                                                     cam_mat[1, 1],
+                                                                     cam_mat[0, 2],
+                                                                     cam_mat[1, 2],
+                                                                     False,
+                                                                     image.shape[2:])  # image has shape [1,1,H,W]
+                        # indices corresponding to the original warped image must be subsampled
+                        # as the network subsamples
+
+                        # idx_x = (idx_x - network.OUTPUT_SUBSAMPLE / 2) / network.OUTPUT_SUBSAMPLE
+                        # idx_y = (idx_y - network.OUTPUT_SUBSAMPLE / 2) / network.OUTPUT_SUBSAMPLE
+                        idx_x = idx_x / network.OUTPUT_SUBSAMPLE
+                        idx_y = idx_y / network.OUTPUT_SUBSAMPLE
+
+                        # truncate too large values (seem to be small deviations)
+                        idx_x[idx_x > scene_coordinates.shape[3]-1] = scene_coordinates.shape[3]-1.00001
+                        idx_y[idx_y > scene_coordinates.shape[2]-1] = scene_coordinates.shape[2]-1.00001
+
+
+                        # interpolate from the output of the network
+                        if opt.unwarp_interp == "bilinear":
+                                scene_coordinates = interp_bilinear(scene_coordinates, idx_x, idx_y)
+                        elif opt.unwarp_interp == "nearest_nb":
+                                scene_coordinates = interp_nearest_nb(scene_coordinates, idx_x, idx_y)
+                        else:
+                                raise ValueError("opt.unwarp_interp must be bilinear or nearest_nb")
+
+
                 scene_coordinates = scene_coordinates.cpu()
 
                 out_pose = torch.zeros((4, 4))
