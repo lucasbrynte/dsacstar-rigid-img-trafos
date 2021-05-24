@@ -57,7 +57,7 @@ opt = parser.parse_args()
 
 # setup dataset
 if opt.mode < 2: opt.mode = 0 # we do not load ground truth scene coordinates when testing
-testset = CamLocDataset("./datasets/" + opt.scene + "/test", mode = opt.mode, warp=opt.warp)
+testset = CamLocDataset("./datasets/" + opt.scene + "/test", mode = opt.mode, test=True, warp=opt.warp)
 testset_loader = torch.utils.data.DataLoader(testset, shuffle=False, num_workers=opt.num_workers)
 
 # load network

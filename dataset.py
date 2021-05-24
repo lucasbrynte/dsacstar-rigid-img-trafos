@@ -30,6 +30,7 @@ class CamLocDataset(Dataset):
                 sparse=False, 
                 augment=False, 
                 warp=False,
+                test=False,
                 aug_inplane_rotation=30,
                 aug_tilt_rotation=20,
                 aug_scale_min=2/3, 
@@ -48,6 +49,7 @@ class CamLocDataset(Dataset):
                         sparse: for mode = 1 (RGB+GT SC), load sparse initialization targets when True, load dense depth maps and generate initialization targets when False
                         augment: Use random data augmentation, note: not supported for mode = 2 (RGB-D) since pre-generateed eye coordinates cannot be agumented
                         warp: Use the warping to azimuthal equidistant projection
+                        test: Testing mode, use precomputed eye-coords (camera coords.)
                         aug_inplane_rotation: Max 2D image rotation angle, sampled uniformly around 0, both directions
                         aug_tilt_rotation: Max tilt rotation angle, sampled uniformly around 0, both directions. This is a rotation around a (random) axis in the principal plane.
                         aug_scale_min: Lower limit of image scale factor for uniform sampling
@@ -62,6 +64,7 @@ class CamLocDataset(Dataset):
                 self.eye = (mode == 2)
 
                 self.warp = warp
+                self.test = test
 
                 self.image_height = image_height
 
@@ -77,11 +80,14 @@ class CamLocDataset(Dataset):
                 if self.eye and self.sparse and self.augment and (self.aug_inplane_rotation > 0 or self.aug_tilt_rotation > 0 or self.aug_scale_min != 1 or self.aug_scale_max != 1):
                         print("WARNING: Check your augmentation settings. Camera coordinates will not be augmented.")
 
+                if self.test and self.augment:
+                        raise ValueError("If you're using dataset in test mode, don't augment the data!")
+
 
                 rgb_dir = root_dir + '/rgb/'
                 pose_dir =  root_dir + '/poses/'
                 calibration_dir = root_dir + '/calibration/'
-                if self.eye and self.sparse:
+                if self.eye and (self.test or self.sparse):
                         coord_dir =  root_dir + '/eye/'
                 elif self.sparse:
                         coord_dir =  root_dir + '/init/'
@@ -154,7 +160,7 @@ class CamLocDataset(Dataset):
                 pose = np.loadtxt(self.pose_files[idx])
                 pose = torch.from_numpy(pose).float()
 
-                if self.init or self.eye:
+                if (self.init or self.eye) and not self.test:
                         if self.sparse:
                                 coords = torch.load(self.coord_files[idx])
                         else:
@@ -162,9 +168,9 @@ class CamLocDataset(Dataset):
                                 depth = depth.astype(np.float64)
                                 depth /= 1000 # from millimeters to meters
                 # instead of loading precomputed camera coords, we compute them online to allow
-                # data augmentation
-                #elif self.eye: 
-                #        coords = torch.load(self.coord_files[idx])
+                # data augmentation, however at test we load the precomputed ones
+                elif self.eye and self.test: 
+                        coords = torch.load(self.coord_files[idx])
                 else:
                         coords = 0
 
@@ -305,7 +311,7 @@ class CamLocDataset(Dataset):
                         # warped image
                         image = my_warp(image, 1, mode='reflect')  # constant? reflect?
 
-                if (self.init or self.eye) and not self.sparse:
+                if (self.init or self.eye) and not self.sparse and not self.test:
                         # init: generate initialization targets from depth map
                         # eye: generate camera coords from depth map
 
