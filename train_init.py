@@ -108,8 +108,7 @@ print("Calculating mean scene coordinate for the scene...")
 mean = torch.zeros((3))
 count = 0
 
-for image, gt_pose, gt_coords, focal_length, file in trainset_loader:
-
+for image, gt_pose, gt_coords, aug_mask, focal_length, file in trainset_loader:
         if use_init:
                 # use mean of ground truth scene coordinates
 
@@ -162,7 +161,7 @@ for epoch in range(epochs):
 
         print("=== Epoch: %d ======================================" % epoch)
 
-        for image, gt_pose, gt_coords, focal_length, file in trainset_loader:
+        for image, gt_pose, gt_coords, aug_mask, focal_length, file in trainset_loader:
 
                 start_time = time.time()
 
@@ -174,6 +173,9 @@ for epoch in range(epochs):
                 cam_mat[0, 2] = image.size(3) / 2
                 cam_mat[1, 2] = image.size(2) / 2
                 cam_mat = cam_mat.cuda()
+                
+                # aug_mask should match format of gt_coords_mask further down
+                aug_mask = aug_mask.squeeze().view(-1).cuda()
 
                 scene_coords = network(image.cuda()) 
 
@@ -225,7 +227,10 @@ for epoch in range(epochs):
                         # check for invalid ground truth scene coordinates
                         gt_coords_mask = gt_coords.abs().sum(0) > 0
 
-                        loss = torch.norm(scene_coords - gt_coords, dim=0, p=2)[gt_coords_mask]
+                        if opt.no_aug:
+                                loss = torch.norm(scene_coords - gt_coords, dim=0, p=2)[gt_coords_mask]
+                        else:
+                                loss = torch.norm(scene_coords - gt_coords, dim=0, p=2)[torch.logical_and(aug_mask, gt_coords_mask)]
                         loss = loss.mean()
                         num_valid_sc = gt_coords_mask.float().mean()
 
@@ -290,6 +295,9 @@ for epoch in range(epochs):
                                 # combine all constraints
                                 valid_scene_coordinates = (invalid_min_depth + invalid_max_depth + invalid_repro) == 0
 
+                        if not opt.no_aug:
+                                valid_scene_coordinates[aug_mask == 0] = 0
+
                         num_valid_sc = int(valid_scene_coordinates.sum())
 
                         # assemble loss
@@ -309,7 +317,12 @@ for epoch in range(epochs):
 
                         if num_valid_sc < scene_coords.size(1):
 
-                                invalid_scene_coordinates = (valid_scene_coordinates == 0) 
+                                # only count coords with are coming from outside original image after augmentation
+                                if opt.no_aug:
+                                        invalid_scene_coordinates = (valid_scene_coordinates == 0) 
+                                else:
+                                        invalid_scene_coordinates = torch.logical_and(aug_mask == 1, valid_scene_coordinates == 0) 
+
 
                                 if use_init:
                                         # 3D distance loss for all invalid scene coordinates where the ground truth is known

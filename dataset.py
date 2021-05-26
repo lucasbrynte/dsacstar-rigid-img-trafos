@@ -174,8 +174,10 @@ class CamLocDataset(Dataset):
                 else:
                         coords = 0
 
-                if self.augment:
+                aug_mask = 0
 
+                if self.augment:
+                        
                         scale_factor = random.uniform(self.aug_scale_min, self.aug_scale_max)
                         inplane_angle = random.uniform(-self.aug_inplane_rotation, self.aug_inplane_rotation)
                         tilt_angle = random.uniform(-self.aug_tilt_rotation, self.aug_tilt_rotation)
@@ -203,6 +205,10 @@ class CamLocDataset(Dataset):
 
                         # scale focal length
                         focal_length *= scale_factor
+
+                        # augmentation mask, to contain 1, where image is well defined after augmentation
+                        # when warping, it works the same way since the predicted scene coord's are rewarped
+                        aug_mask = np.ones([image.shape[1], image.shape[2], 1])
 
                         # Image has now been resized to another resolution, and focal length has been rescaled accordingly.
                         # The principal point has also been effectively rescaled, such that it is still at the center of the image at the new resolution.
@@ -242,7 +248,10 @@ class CamLocDataset(Dataset):
                                 return t
 
                         image = my_rot(image, inplane_angle, 1, mode='reflect', img_is_pt_tensor=True)
-
+                        aug_mask = my_rot(aug_mask, inplane_angle, 0, mode='constant', img_is_pt_tensor=False)
+                        # subsample to network output size
+                        aug_mask = aug_mask[::Network.OUTPUT_SUBSAMPLE,::Network.OUTPUT_SUBSAMPLE]
+                        
                         if self.init or self.eye:
 
                                 if self.sparse and self.init:
@@ -372,4 +381,4 @@ class CamLocDataset(Dataset):
                                 assert eye.shape == coords.shape, 'eye.shape {} not consistent with coords.shape {}'.format(tuple(eye.shape), tuple(coords.shape))
                                 coords[:,:,:] = eye
 
-                return image, pose, coords, focal_length, self.rgb_files[idx]
+                return image, pose, coords, aug_mask, focal_length, self.rgb_files[idx]
