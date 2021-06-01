@@ -85,6 +85,12 @@ parser.add_argument('--aug-tilt-rot-max', type=float, default=20,
         help='Maximum angle for tilt rotation augmentation.')
 opt = parser.parse_args()
 
+if opt.aug_scale_range[0] != 1 or \
+   opt.aug_scale_range[1] != 1 or \
+   opt.aug_inplane_rot_max != 0 or \
+   opt.aug_tilt_rot_max != 0:
+        raise NotImplementedError("Geometric augmentation is currently not implemented for end-to-end training")
+
 trainset = CamLocDataset(
         "./datasets/" + opt.scene + "/train",
         mode=(0 if opt.mode < 2 else opt.mode),

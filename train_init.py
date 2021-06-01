@@ -295,6 +295,7 @@ for epoch in range(epochs):
                                 # combine all constraints
                                 valid_scene_coordinates = (invalid_min_depth + invalid_max_depth + invalid_repro) == 0
 
+                        # only count coords with are coming from original image
                         if not opt.no_aug:
                                 valid_scene_coordinates[aug_mask == 0] = 0
 
@@ -317,7 +318,7 @@ for epoch in range(epochs):
 
                         if num_valid_sc < scene_coords.size(1):
 
-                                # only count coords with are coming from outside original image after augmentation
+                                # only count coords with are coming from  original image
                                 if opt.no_aug:
                                         invalid_scene_coordinates = (valid_scene_coordinates == 0) 
                                 else:
