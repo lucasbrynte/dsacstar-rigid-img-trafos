@@ -1,4 +1,133 @@
-# DSAC* for Visual Camera Re-Localization (RGB or RGB-D)
+# DSAC\* with modifications for Natural Image Transformations
+
+This code is a modification of the DSAC\* repository found [on GitHub](https://github.com/vislearn/dsacstar).
+This README is a modification of the original DSAC\* README, which is reproduced in its entirety further down.
+
+To run the experiments for the Natural Image Transformations paper, use the installation instructions from the original DSAC\*, [see here](#installation). Note that the C++ extension is also modified so it needs to be recompiled if you already have the original extension installed.
+
+Use the original instructions for downloading the 7-Scenes dataset, [see here](#7scenes).
+
+Read the original instructions for how to run the [training](#training-dsac) and [testing](#testing-dsac) in RGB-mode.
+Please note that while we have implemented many changes for the RGB+M and RGB-D modes as well, we have not tested them thoroughly and don't recommend using those modes as is.
+
+We add the following flags to the initialization training (`train_init.py`):
+- `--warp` : used for specifying that the images should be transformed to the PY-domain.
+- `--aug-tilt-rot-max angle` : used for specifying the range of angles that the tilt augmentation is sampled from, which is +- `angle`.
+- `--unwarp_interp` : used for specifying the interpolation type when transforming pixel coordinates from the PY-domain to the original image domain. We don't use this flag in our experiments, always using the default bilinear interpolation as it seems to work fine.
+
+The same flags are added to the end-to-end training as well (`train_e2e.py`), but we have not implemented the augmentation mask for the end-to-end training and thus require `--aug-tilt-rot-max 0` as well as turning off the original geometric augmentations as well: `--aug-inplane-rot-max 0`, `--aug-scale-range 1 1`.
+
+## Initialization training settings
+The initialization phase of the five experiments described in the paper are run as follows.
+
+Baseline
+```
+python train_init.py \
+    7scenes_<scene-name> \
+    <path-to-store-model-at> \
+    --mode 0 \
+    --tiny \
+    --aug-tilt-rot-max 0 \
+    --aug-scale-range 1 1 \
+    --aug-inplane-rot-max 0
+```
+
+Baseline+GeomAug
+```
+python train_init.py \
+    7scenes_<scene-name> \
+    <path-to-store-model-at> \
+    --mode 0 \
+    --tiny \
+    --aug-tilt-rot-max 0
+```
+
+RHaug
+```
+python train_init.py \
+    7scenes_<scene-name> \
+    <path-to-store-model-at> \
+    --mode 0 \
+    --tiny
+```
+
+PY
+```
+python train_init.py \
+    7scenes_<scene-name> \
+    <path-to-store-model-at> \
+    --mode 0 \
+    --tiny \
+    --warp \
+    --aug-tilt-rot-max 0 \
+    --aug-scale-range 1 1 \
+    --aug-inplane-rot-max 0
+```
+
+PY+GeomAug
+```
+python train_init.py \
+    7scenes_<scene-name> \
+    <path-to-store-model-at> \
+    --mode 0 \
+    --tiny \
+    --warp \
+    --aug-tilt-rot-max 0
+```
+
+## End-to-end training settings
+The end-to-end phase of the five experiments described in the paper are run as follows.
+
+Baseline, Baseline+GeomAug, RHaug
+```
+python train_e2e.py \
+    7scenes_<scene-name> \
+    <path-to-load-init-trained-model-from> \
+    <path-to-store-model-at> \
+    --mode 0 \
+    --tiny \
+    --aug-tilt-rot-max 0 \
+    --aug-scale-range 1 1 \
+    --aug-inplane-rot-max 0
+```
+
+PY, PY+GeomAug
+```
+python train_e2e.py \
+    7scenes_<scene-name> \
+    <path-to-load-init-trained-model-from> \
+    <path-to-store-model-at> \
+    --mode 0 \
+    --tiny \
+    --warp \
+    --aug-tilt-rot-max 0 \
+    --aug-scale-range 1 1 \
+    --aug-inplane-rot-max 0
+```
+
+## Testing settings
+The testing of the five experiments described in the paper are run as follows.
+See the original instructions for the test output [here](#testing-dsac).
+
+Baseline, Baseline+GeomAug, RHaug
+```
+python test.py \
+    <path-to-load-e2e-trained-model-from> \
+    --mode 0 \
+    --tiny
+```
+
+PY, PY+GeomAug
+```
+python test.py \
+    <path-to-load-e2e-trained-model-from> \
+    --mode 0 \
+    --tiny \
+    --warp
+```
+
+
+# \[THE ORIGINAL README:\] DSAC\* for Visual Camera Re-Localization (RGB or RGB-D)
 
 - [Introduction](#introduction)
 - [Installation](#installation)
