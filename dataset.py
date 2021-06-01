@@ -208,7 +208,7 @@ class CamLocDataset(Dataset):
 
                         # augmentation mask, to contain 1, where image is well defined after augmentation
                         # when warping, it works the same way since the predicted scene coord's are rewarped
-                        aug_mask = np.ones([image.shape[1], image.shape[2], 1])
+                        aug_mask = np.ones([image.shape[1], image.shape[2], 1], dtype=np.bool)
 
                         # Image has now been resized to another resolution, and focal length has been rescaled accordingly.
                         # The principal point has also been effectively rescaled, such that it is still at the center of the image at the new resolution.
@@ -250,7 +250,7 @@ class CamLocDataset(Dataset):
                         image = my_rot(image, inplane_angle, 1, mode='reflect', img_is_pt_tensor=True)
                         aug_mask = my_rot(aug_mask, inplane_angle, 0, mode='constant', img_is_pt_tensor=False)
                         # subsample to network output size
-                        aug_mask = aug_mask[::Network.OUTPUT_SUBSAMPLE,::Network.OUTPUT_SUBSAMPLE]
+                        aug_mask = aug_mask[::Network.OUTPUT_SUBSAMPLE,::Network.OUTPUT_SUBSAMPLE].astype(np.bool)
                         
                         if self.init or self.eye:
 
