@@ -146,7 +146,7 @@ for epoch in range(epochs):
 
         print("=== Epoch: %7d ======================================" % epoch)
 
-        for image, pose, camera_coordinates, focal_length, file in trainset_loader:
+        for image, pose, camera_coordinates, aug_mask, focal_length, file in trainset_loader:
 
                 start_time = time.time()
 
@@ -199,6 +199,12 @@ for epoch in range(epochs):
                                 scene_coordinates = interp_nearest_nb(scene_coordinates, idx_x, idx_y)
                         else:
                                 raise ValueError("opt.unwarp_interp must be bilinear or nearest_nb")
+
+                # zero-out masked
+                # this is not used at the moment, since the c++ code that is supposed to handle it
+                # is not yet functional
+                # scene_coordinates[:, :, ~aug_mask[0,:,:,0]] = 0
+                # assert scene_coordinates.abs().sum() > 0, "all predictions are 0"
 
                 # tensor for gradients
                 scene_coordinate_gradients = torch.zeros(scene_coordinates.size())
