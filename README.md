@@ -11,11 +11,13 @@ Read the original instructions for how to run the [training](#training-dsac) and
 Please note that while we have implemented many changes for the RGB+M and RGB-D modes as well, we have not tested them thoroughly and don't recommend using those modes as is.
 
 We add the following flags to the initialization training (`train_init.py`):
-- `--warp` : used for specifying that the images should be transformed to the PY-domain.
+- `--aug-inplane-rot-max angle` : used for specifying the range of angles that the inplane augmentation is sampled from, which is +- `angle`.
+- `--aug-scale-range min max` : used for specifying the range of image scaling augmentations.
 - `--aug-tilt-rot-max angle` : used for specifying the range of angles that the tilt augmentation is sampled from, which is +- `angle`.
+- `--warp` : used for specifying that the images should be transformed to the PY-domain.
 - `--unwarp_interp` : used for specifying the interpolation type when transforming pixel coordinates from the PY-domain to the original image domain. We don't use this flag in our experiments, always using the default bilinear interpolation as it seems to work fine.
 
-The same flags are added to the end-to-end training as well (`train_e2e.py`), but we have not implemented the augmentation mask for the end-to-end training and thus require `--aug-tilt-rot-max 0` as well as turning off the original geometric augmentations as well: `--aug-inplane-rot-max 0`, `--aug-scale-range 1 1`.
+The same flags are added to the end-to-end training as well (`train_e2e.py`), but we have not implemented the augmentation mask for the end-to-end training and thus require `--aug-tilt-rot-max 0`, `--aug-inplane-rot-max 0`, `--aug-scale-range 1 1`.
 
 For testing, we only add the `--warp` flag.
 
