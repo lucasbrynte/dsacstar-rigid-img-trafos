@@ -96,7 +96,7 @@ pixel_grid = pixel_grid.cuda()
 
 with torch.no_grad():   
 
-        for image, gt_pose, init, focal_length, file in testset_loader:
+        for image, gt_pose, init, aug_mask, focal_length, file in testset_loader:
 
                 focal_length = float(focal_length[0])
                 file = file[0].split('/')[-1] # remove path from file name
