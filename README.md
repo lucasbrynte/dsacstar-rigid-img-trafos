@@ -3,7 +3,7 @@
 This code is a modification of the DSAC\* repository found [on GitHub](https://github.com/vislearn/dsacstar).
 This README is a modification of the original DSAC\* README, which is reproduced in its entirety further down.
 
-To run the experiments for the Natural Image Transformations paper, use the installation instructions from the original DSAC\*, [see here](#installation). Note that the C++ extension is also modified so it needs to be recompiled if you already have the original extension installed.
+To be able to run the experiments for the Natural Image Transformations paper, use the installation instructions from the original DSAC\*, [see here](#installation). Note that the C++ extension is also modified so it needs to be recompiled if you already have the original extension installed.
 
 Use the original instructions for downloading the 7-Scenes dataset, [see here](#7scenes). Note that only the RGB-case has been considered by us.
 
@@ -20,7 +20,7 @@ The same flags are added to the end-to-end training as well (`train_e2e.py`), bu
 For testing, we only add the `--warp` flag.
 
 ## Initialization training settings
-The initialization phase of the five experiments described in the paper are run as follows.
+The initialization phase of the five experiments described in the paper is run as follows.
 
 Baseline
 ```
@@ -78,7 +78,7 @@ python train_init.py \
 ```
 
 ## End-to-end training settings
-The end-to-end phase of the five experiments described in the paper are run as follows.
+The end-to-end phase of the five experiments described in the paper is run as follows.
 
 Baseline, Baseline+GeomAug, RHaug
 ```
@@ -108,7 +108,7 @@ python train_e2e.py \
 ```
 
 ## Testing settings
-The testing of the five experiments described in the paper are run as follows.
+The testing of the five experiments described in the paper is run as follows.
 See the original instructions for the test output [here](#testing-dsac).
 
 Baseline, Baseline+GeomAug, RHaug
