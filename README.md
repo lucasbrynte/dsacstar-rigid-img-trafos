@@ -5,7 +5,7 @@ This README is a modification of the original DSAC\* README, which is reproduced
 
 To run the experiments for the Natural Image Transformations paper, use the installation instructions from the original DSAC\*, [see here](#installation). Note that the C++ extension is also modified so it needs to be recompiled if you already have the original extension installed.
 
-Use the original instructions for downloading the 7-Scenes dataset, [see here](#7scenes).
+Use the original instructions for downloading the 7-Scenes dataset, [see here](#7scenes). Note that only the RGB-case has been considered by us.
 
 Read the original instructions for how to run the [training](#training-dsac) and [testing](#testing-dsac) in RGB-mode.
 Please note that while we have implemented many changes for the RGB+M and RGB-D modes as well, we have not tested them thoroughly and don't recommend using those modes as is.
@@ -16,6 +16,8 @@ We add the following flags to the initialization training (`train_init.py`):
 - `--unwarp_interp` : used for specifying the interpolation type when transforming pixel coordinates from the PY-domain to the original image domain. We don't use this flag in our experiments, always using the default bilinear interpolation as it seems to work fine.
 
 The same flags are added to the end-to-end training as well (`train_e2e.py`), but we have not implemented the augmentation mask for the end-to-end training and thus require `--aug-tilt-rot-max 0` as well as turning off the original geometric augmentations as well: `--aug-inplane-rot-max 0`, `--aug-scale-range 1 1`.
+
+For testing, we only add the `--warp` flag.
 
 ## Initialization training settings
 The initialization phase of the five experiments described in the paper are run as follows.
