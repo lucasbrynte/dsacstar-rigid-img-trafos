@@ -80,8 +80,8 @@ parser.add_argument('--unwarp_interp', default='bilinear',
 parser.add_argument('--aug-tilt-rot-max', type=float, default=20,
         help='Maximum angle for tilt rotation augmentation.')
 
-parser.add_argument('--unwarp_interp', default='bilinear',
-        help='interpolation type for unwarping - bilinear or nearest_nb')
+parser.add_argument('--dataset-fraction', type=float, default=-1.0,
+                    help='Fraction of training data to use. -1 means all.')
 
 opt = parser.parse_args()
 
@@ -93,6 +93,7 @@ trainset = CamLocDataset(
         mode=min(opt.mode, 1),
         sparse=opt.sparse,
         augment=not opt.no_aug,
+        dataset_fraction=opt.dataset_fraction,
         warp=opt.warp,
         aug_inplane_rotation=opt.aug_inplane_rot_max,
         aug_tilt_rotation=opt.aug_tilt_rot_max,

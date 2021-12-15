@@ -31,6 +31,7 @@ class CamLocDataset(Dataset):
                 augment=False, 
                 warp=False,
                 test=False,
+                dataset_fraction=-1,  # -1 for complete data
                 aug_inplane_rotation=30,
                 aug_tilt_rotation=20,
                 aug_scale_min=2/3, 
@@ -50,6 +51,7 @@ class CamLocDataset(Dataset):
                         augment: Use random data augmentation, note: not supported for mode = 2 (RGB-D) since pre-generateed eye coordinates cannot be agumented
                         warp: Use the warping to azimuthal equidistant projection
                         test: Testing mode, use precomputed eye-coords (camera coords.)
+                        dataset_fraction: Fraction of data to use. -1 gives complete data (as does any value not between 0 and 1).
                         aug_inplane_rotation: Max 2D image rotation angle, sampled uniformly around 0, both directions
                         aug_tilt_rotation: Max tilt rotation angle, sampled uniformly around 0, both directions. This is a rotation around a (random) axis in the principal plane.
                         aug_scale_min: Lower limit of image scale factor for uniform sampling
@@ -128,6 +130,20 @@ class CamLocDataset(Dataset):
 
                 if len(self.rgb_files) != len(self.pose_files):
                         raise Exception('RGB file count does not match pose file count!')
+
+
+                # Subsample the dataset
+                if dataset_fraction > 0 and dataset_fraction < 1:
+                        dataset_size = int(np.round(dataset_fraction * len(self.rgb_files)))
+                        prng = np.random.RandomState(2000)  # want consistent sampling
+                        dataset_indices = list(prng.choice(len(self.rgb_files),
+                                                          size=dataset_size,
+                                                          replace=False))
+                        self.rgb_files = [self.rgb_files[idx] for idx in dataset_indices]
+                        self.pose_files = [self.pose_files[idx] for idx in dataset_indices]
+                        self.calibration_files = [self.calibration_files[idx] for idx in dataset_indices]
+                        if self.init or self.eye:
+                                self.coord_files = [self.coord_files[idx] for idx in dataset_indices]
 
                 if not sparse:
 
