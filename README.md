@@ -1,9 +1,9 @@
-# DSAC\* with modifications for Natural Image Transformations
+# DSAC\* with modifications for Rigidity Preserving Image Transformations
 
 This code is a modification of the DSAC\* repository found [on GitHub](https://github.com/vislearn/dsacstar).
 This README is a modification of the original DSAC\* README, which is reproduced in its entirety further down.
 
-To be able to run the experiments for the Natural Image Transformations paper, use the installation instructions from the original DSAC\*, [see here](#installation). Note that the C++ extension is also modified so it needs to be recompiled if you already have the original extension installed.
+To be able to run the experiments for the Rigidity Preserving Image Transformations paper, use the installation instructions from the original DSAC\*, [see here](#installation). Note that the C++ extension is also modified so it needs to be recompiled if you already have the original extension installed.
 
 Use the original instructions for downloading the 7-Scenes dataset, [see here](#7scenes). Note that only the RGB-case has been considered by us.
 
